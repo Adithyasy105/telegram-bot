@@ -2,13 +2,14 @@ import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
 import requests
+import os
+
+# Replace with your actual API key for Telegram Bot
+API_KEY = os.getenv("API_KEY")
 
 # Set up logging to get feedback in the terminal
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Replace with your actual API key for Telegram Bot
-API_KEY = '8197843473:AAGCQ_sDq9vo2GwXCMxtucVTKLKK5MEfJT4'
 
 # Conversion rate API for currency conversion
 CONVERSION_URL = 'https://api.exchangerate-api.com/v4/latest/INR'  # Replace with the base currency you prefer
