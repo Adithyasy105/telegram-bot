@@ -1,6 +1,6 @@
 import logging
 import os
-import requests
+import aiohttp  # Use aiohttp for async HTTP requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, ContextTypes,
@@ -65,18 +65,19 @@ async def handle_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE
 # Fetch conversion rate
 async def get_conversion_rate(conversion_choice: str) -> float:
     try:
-        response = requests.get(CONVERSION_URL)
-        data = response.json()
-        if conversion_choice == 'USD_INR':
-            return data['rates']['INR'] / data['rates']['USD']
-        elif conversion_choice == 'INR_USD':
-            return data['rates']['USD'] / data['rates']['INR']
-        elif conversion_choice == 'USD_EUR':
-            return data['rates']['EUR'] / data['rates']['USD']
-        elif conversion_choice == 'EUR_USD':
-            return data['rates']['USD'] / data['rates']['EUR']
-        return None
-    except requests.exceptions.RequestException as e:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(CONVERSION_URL) as response:
+                data = await response.json()
+                if conversion_choice == 'USD_INR':
+                    return data['rates']['INR'] / data['rates']['USD']
+                elif conversion_choice == 'INR_USD':
+                    return data['rates']['USD'] / data['rates']['INR']
+                elif conversion_choice == 'USD_EUR':
+                    return data['rates']['EUR'] / data['rates']['USD']
+                elif conversion_choice == 'EUR_USD':
+                    return data['rates']['USD'] / data['rates']['EUR']
+                return None
+    except aiohttp.ClientError as e:
         logger.error(f"Error fetching conversion rates: {e}")
         return None
 
