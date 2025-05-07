@@ -96,13 +96,9 @@ def main() -> None:
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount_input))
 
-    # Get PORT from Railway environment or default to 5000
     port = int(os.environ.get('PORT', 5000))
+    webhook_url = f"{os.getenv('RAILWAY_URL')}/webhook"
 
-    # Your deployed webhook URL on Railway
-    webhook_url = 'https://telegram-bot-production-1e18.up.railway.app/webhook'
-
-    # Start webhook listener
     application.run_webhook(
         listen="0.0.0.0",
         port=port,
@@ -111,3 +107,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
