@@ -2,12 +2,15 @@ import logging
 import os
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
+from telegram.ext import (
+    Application, CommandHandler, ContextTypes,
+    CallbackQueryHandler, MessageHandler, filters
+)
 
-# API key from environment variables (Set this in Railway's dashboard)
-API_KEY = os.getenv("API_KEY")  # Make sure this is set in Railway
+# Set your Telegram Bot Token directly or via Railway environment variable
+API_KEY = os.getenv("API_KEY")  # Set this in Railway's "Variables" tab
 
-# Set up logging
+# Logging setup
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -17,7 +20,7 @@ CONVERSION_URL = 'https://api.exchangerate-api.com/v4/latest/INR'
 # Store user's conversion choice
 user_conversion_choice = {}
 
-# Start command
+# /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [
         [InlineKeyboardButton("Convert USD to INR", callback_data='USD_INR')],
@@ -28,14 +31,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Welcome! Choose a conversion option:", reply_markup=reply_markup)
 
-# Handle button presses
+# Handle button click
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
     user_conversion_choice[query.from_user.id] = query.data
     await query.edit_message_text("Please enter the amount you want to convert:")
 
-# Handle user input amount
+# Handle amount input
 async def handle_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
     if user_id not in user_conversion_choice:
@@ -77,7 +80,7 @@ async def get_conversion_rate(conversion_choice: str) -> float:
         logger.error(f"Error fetching conversion rates: {e}")
         return None
 
-# Show conversion options again
+# Show conversion buttons again
 async def show_conversion_buttons(update: Update) -> None:
     keyboard = [
         [InlineKeyboardButton("Convert USD to INR", callback_data='USD_INR')],
@@ -96,15 +99,8 @@ def main() -> None:
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount_input))
 
-    port = int(os.environ.get('PORT', 5000))
-    webhook_url = f"{os.getenv('RAILWAY_URL')}/webhook"
-
-    application.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        webhook_url=webhook_url
-    )
+    # Run using polling (no webhook)
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
-
