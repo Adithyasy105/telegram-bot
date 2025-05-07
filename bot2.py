@@ -1,11 +1,12 @@
 import logging
 import os
-import aiohttp  # Use aiohttp for async HTTP requests
+import aiohttp
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, ContextTypes,
     CallbackQueryHandler, MessageHandler, filters
 )
+from telegram import Bot
 
 # Set your Telegram Bot Token directly or via Railway environment variable
 API_KEY = os.getenv("API_KEY")  # Set this in Railway's "Variables" tab
@@ -19,6 +20,11 @@ CONVERSION_URL = 'https://api.exchangerate-api.com/v4/latest/INR'
 
 # Store user's conversion choice
 user_conversion_choice = {}
+
+# Clear existing webhook if it was set
+def clear_webhook():
+    bot = Bot(token=API_KEY)
+    bot.delete_webhook()
 
 # /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -94,6 +100,9 @@ async def show_conversion_buttons(update: Update) -> None:
 
 # Entry point
 def main() -> None:
+    # Clear any existing webhook setup before starting polling
+    clear_webhook()
+
     application = Application.builder().token(API_KEY).build()
 
     application.add_handler(CommandHandler("start", start))
