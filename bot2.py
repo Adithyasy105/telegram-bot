@@ -113,8 +113,11 @@ def main() -> None:
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount_input))
 
-    # Switch to webhook if running on Railway (recommended for production)
-    application.run_webhook(port=5000, webhook_url='/webhook')
+    # Set up the full webhook URL (ensure you replace with your actual Railway URL)
+    webhook_url = 'https://telegram-bot-production-1e18.up.railway.app/webhook'  # Correct URL
+
+    # Run the bot with the correct webhook URL
+    application.run_webhook(port=5000, webhook_url=webhook_url)
 
 # Ensure this runs only when the script is executed
 if __name__ == "__main__":
