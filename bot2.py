@@ -1,18 +1,18 @@
 import logging
+import os
+import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
-import requests
-import os
 
 # Replace with your actual API key for Telegram Bot
-API_KEY = os.getenv("API_KEY")
+API_KEY = os.getenv("API_KEY")  # Make sure to set the API_KEY environment variable
 
 # Set up logging to get feedback in the terminal
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Conversion rate API for currency conversion
-CONVERSION_URL = 'https://api.exchangerate-api.com/v4/latest/INR'  # Replace with the base currency you prefer
+CONVERSION_URL = 'https://api.exchangerate-api.com/v4/latest/INR'  # Base currency is INR here
 
 # Store the user's conversion choice temporarily
 user_conversion_choice = {}
@@ -24,7 +24,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         [InlineKeyboardButton("Convert INR to USD", callback_data='INR_USD')],
         [InlineKeyboardButton("Convert USD to EUR", callback_data='USD_EUR')],
         [InlineKeyboardButton("Convert EUR to USD", callback_data='EUR_USD')],
-        # Add more buttons as needed
     ]
     
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -75,19 +74,23 @@ async def handle_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def get_conversion_rate(conversion_choice: str) -> float:
     """Get conversion rate from an API."""
-    response = requests.get(CONVERSION_URL)
-    data = response.json()
+    try:
+        response = requests.get(CONVERSION_URL)
+        data = response.json()
 
-    # Define the conversion pairs and rates
-    if conversion_choice == 'USD_INR':
-        return data['rates']['INR'] / data['rates']['USD']
-    elif conversion_choice == 'INR_USD':
-        return data['rates']['USD'] / data['rates']['INR']
-    elif conversion_choice == 'USD_EUR':
-        return data['rates']['EUR'] / data['rates']['USD']
-    elif conversion_choice == 'EUR_USD':
-        return data['rates']['USD'] / data['rates']['EUR']
-    return None
+        # Define the conversion pairs and rates
+        if conversion_choice == 'USD_INR':
+            return data['rates']['INR'] / data['rates']['USD']
+        elif conversion_choice == 'INR_USD':
+            return data['rates']['USD'] / data['rates']['INR']
+        elif conversion_choice == 'USD_EUR':
+            return data['rates']['EUR'] / data['rates']['USD']
+        elif conversion_choice == 'EUR_USD':
+            return data['rates']['USD'] / data['rates']['EUR']
+        return None
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching conversion rates: {e}")
+        return None
 
 async def show_conversion_buttons(update: Update) -> None:
     """Show the conversion buttons again after a conversion."""
@@ -110,8 +113,8 @@ def main() -> None:
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount_input))
 
-    # Run the bot until it is stopped
-    application.run_polling()
+    # Switch to webhook if running on Railway (recommended for production)
+    application.run_webhook(port=5000, webhook_url='/webhook')
 
 # Ensure this runs only when the script is executed
 if __name__ == "__main__":
