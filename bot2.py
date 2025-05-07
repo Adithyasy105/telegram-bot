@@ -4,81 +4,66 @@ import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
 
-# Replace with your actual API key for Telegram Bot
-API_KEY = os.getenv("API_KEY")  # Make sure to set the API_KEY environment variable
+# API key from environment variables (Set this in Railway's dashboard)
+API_KEY = os.getenv("API_KEY")  # Make sure this is set in Railway
 
-# Set up logging to get feedback in the terminal
+# Set up logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Conversion rate API for currency conversion
-CONVERSION_URL = 'https://api.exchangerate-api.com/v4/latest/INR'  # Base currency is INR here
+# Currency conversion base URL
+CONVERSION_URL = 'https://api.exchangerate-api.com/v4/latest/INR'
 
-# Store the user's conversion choice temporarily
+# Store user's conversion choice
 user_conversion_choice = {}
 
+# Start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a welcome message and show buttons."""
     keyboard = [
         [InlineKeyboardButton("Convert USD to INR", callback_data='USD_INR')],
         [InlineKeyboardButton("Convert INR to USD", callback_data='INR_USD')],
         [InlineKeyboardButton("Convert USD to EUR", callback_data='USD_EUR')],
         [InlineKeyboardButton("Convert EUR to USD", callback_data='EUR_USD')],
     ]
-    
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Welcome! Choose a conversion option:", reply_markup=reply_markup)
 
+# Handle button presses
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle button presses and prompt the user for an amount."""
     query = update.callback_query
-    await query.answer()  # Acknowledge the button press
-
-    # Store the user's conversion choice
+    await query.answer()
     user_conversion_choice[query.from_user.id] = query.data
-
-    # Ask the user for the amount to convert
     await query.edit_message_text("Please enter the amount you want to convert:")
 
-# Function to handle user's amount input
+# Handle user input amount
 async def handle_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle user's input for the amount to convert."""
     user_id = update.message.from_user.id
     if user_id not in user_conversion_choice:
         await update.message.reply_text("Please use /start to select a conversion option first.")
         return
-    
     try:
-        # Get the amount the user entered
         amount = float(update.message.text)
         conversion_choice = user_conversion_choice[user_id]
-
-        # Perform the conversion based on the user's choice
         conversion_rate = await get_conversion_rate(conversion_choice)
+
         if conversion_rate is None:
-            await update.message.reply_text("Sorry, I couldn't fetch the conversion rate. Please try again later.")
+            await update.message.reply_text("Sorry, I couldn't fetch the conversion rate.")
             return
-        
+
         result = amount * conversion_rate
-        # Send the conversion result
         await update.message.reply_text(f"The conversion result is: {result:.2f}")
-        
-        # After conversion, show the conversion buttons again
         await show_conversion_buttons(update)
 
     except ValueError:
         await update.message.reply_text("Please enter a valid number.")
 
-    # Clear the user's conversion choice after the conversion
     del user_conversion_choice[user_id]
 
+# Fetch conversion rate
 async def get_conversion_rate(conversion_choice: str) -> float:
-    """Get conversion rate from an API."""
     try:
         response = requests.get(CONVERSION_URL)
         data = response.json()
-
-        # Define the conversion pairs and rates
         if conversion_choice == 'USD_INR':
             return data['rates']['INR'] / data['rates']['USD']
         elif conversion_choice == 'INR_USD':
@@ -92,8 +77,8 @@ async def get_conversion_rate(conversion_choice: str) -> float:
         logger.error(f"Error fetching conversion rates: {e}")
         return None
 
+# Show conversion options again
 async def show_conversion_buttons(update: Update) -> None:
-    """Show the conversion buttons again after a conversion."""
     keyboard = [
         [InlineKeyboardButton("Convert USD to INR", callback_data='USD_INR')],
         [InlineKeyboardButton("Convert INR to USD", callback_data='INR_USD')],
@@ -103,22 +88,26 @@ async def show_conversion_buttons(update: Update) -> None:
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Choose another conversion option:", reply_markup=reply_markup)
 
+# Entry point
 def main() -> None:
-    """Start the bot."""
-    # Set up the application and handlers
     application = Application.builder().token(API_KEY).build()
 
-    # Add handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount_input))
 
-    # Set up the full webhook URL (ensure you replace with your actual Railway URL)
-    webhook_url = 'https://telegram-bot-production-1e18.up.railway.app/webhook'  # Correct URL
+    # Get PORT from Railway environment or default to 5000
+    port = int(os.environ.get('PORT', 5000))
 
-    # Run the bot with the correct webhook URL
-    application.run_webhook(port=5000, webhook_url=webhook_url)
+    # Your deployed webhook URL on Railway
+    webhook_url = 'https://telegram-bot-production-1e18.up.railway.app/webhook'
 
-# Ensure this runs only when the script is executed
+    # Start webhook listener
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        webhook_url=webhook_url
+    )
+
 if __name__ == "__main__":
-    main()  # Start the bot
+    main()
